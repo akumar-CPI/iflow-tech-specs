@@ -1,5 +1,5 @@
 {
-  "provider": "anthropic",
+  "provider": "gemini",
   "models": {
     "anthropic": "claude-sonnet-4-6",
     "openai": "gpt-4.1",
