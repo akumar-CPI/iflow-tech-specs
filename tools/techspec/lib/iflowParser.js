@@ -63,7 +63,8 @@ function classify(props) {
 
 function parseTable(xmlLikeString) {
   if (!xmlLikeString) return [];
-  const doc = new DOMParser({ errorHandler: () => {} }).parseFromString(`<root>${xmlLikeString}</root>`, "text/xml");
+  // const doc = new DOMParser({ errorHandler: () => {} }).parseFromString(`<root>${xmlLikeString}</root>`, "text/xml");
+  const doc = new DOMParser({ onError: () => {} }).parseFromString(`<root>${xmlLikeString}</root>`, "text/xml");
   if (!doc || !doc.getElementsByTagName) return [];
   const rows = Array.from(doc.getElementsByTagName("row"));
   return rows.map((row) => {
@@ -166,8 +167,13 @@ async function parseZipBuffer(buffer) {
   const iflwName = fileNames.find((n) => n.toLowerCase().endsWith(".iflw"));
   if (!iflwName) throw new Error("No .iflw file found inside the uploaded zip.");
   const iflwText = await zip.files[iflwName].async("text");
-  const xml = new DOMParser({ errorHandler: { warning: () => {}, error: () => {}, fatalError: (e) => { throw new Error(`XML parse error: ${e}`); } } }).parseFromString(iflwText, "text/xml");
-
+  // const xml = new DOMParser({ errorHandler: { warning: () => {}, error: () => {}, fatalError: (e) => { throw new Error(`XML parse error: ${e}`); } } }).parseFromString(iflwText, "text/xml");
+  const xml = new DOMParser({
+  onError: (level, msg) => {
+    if (level === "fatalError") throw new Error(`XML parse error: ${msg}`);
+  },
+}).parseFromString(iflwText, "text/xml");
+  
   const iflowNameGuess = iflwName.split("/").pop().replace(/\.iflw$/i, "");
 
   const participants = byLocalName(xml, "participant").map((p) => ({
@@ -224,7 +230,8 @@ async function parseZipBuffer(buffer) {
   if (paramPropFile) parametersProp = await zip.files[paramPropFile].async("text");
   if (paramDefFile) {
     const t = await zip.files[paramDefFile].async("text");
-    const doc = new DOMParser({ errorHandler: () => {} }).parseFromString(t, "text/xml");
+    // const doc = new DOMParser({ errorHandler: () => {} }).parseFromString(t, "text/xml");
+    const doc = new DOMParser({ onError: () => {} }).parseFromString(t, "text/xml");
     parametersDefined = Array.from(doc.getElementsByTagName("param")).map((p) => ({
       name: p.getAttribute("name") || p.textContent,
     }));
