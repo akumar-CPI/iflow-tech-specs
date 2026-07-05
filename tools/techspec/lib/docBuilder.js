@@ -184,25 +184,50 @@ async function build({ parsed, ai, diagrams, docTitle }) {
   (ai.deploymentChecklist || []).forEach((item) => children.push(bullet(item)));
   children.push(spacer());
 
+  // children.push(h2("8. Sender & Receiver Channels"));
+  // const chanRows = parsed.messageFlows.map((mf) => {
+  //   const p = mf.props;
+  //   const details = [
+  //     p.TransportProtocolVersion ? `version ${p.TransportProtocolVersion}` : null,
+  //     p.httpMethod ? `method ${p.httpMethod}` : null,
+  //     p.httpRequestTimeout ? `timeout ${p.httpRequestTimeout} ms` : null,
+  //     p.connectTimeout ? `connect timeout ${p.connectTimeout} ms` : null,
+  //     p.maximumReconnectAttempts ? `max reconnects ${p.maximumReconnectAttempts}` : null,
+  //     p.authenticationMethod ? `auth ${p.authenticationMethod}` : (p.authentication ? `auth ${p.authentication}` : null),
+  //   ].filter(Boolean).join(", ");
+  //   return [mf.name || "\u2014", p.direction || "\u2014", p.ComponentType || p.TransportProtocol || "\u2014", details || "\u2014"];
+  // });
+  // if (chanRows.length) {
+  //   children.push(makeTable(["Channel", "Direction", "Adapter", "Key Settings"], chanRows, [16, 20, 18, 46]));
+  // } else {
+  //   children.push(body("No adapter channels detected.", { italics: true }));
+  // }
+  // children.push(spacer(), spacer());
+
   children.push(h2("8. Sender & Receiver Channels"));
-  const chanRows = parsed.messageFlows.map((mf) => {
-    const p = mf.props;
-    const details = [
-      p.TransportProtocolVersion ? `version ${p.TransportProtocolVersion}` : null,
-      p.httpMethod ? `method ${p.httpMethod}` : null,
-      p.httpRequestTimeout ? `timeout ${p.httpRequestTimeout} ms` : null,
-      p.connectTimeout ? `connect timeout ${p.connectTimeout} ms` : null,
-      p.maximumReconnectAttempts ? `max reconnects ${p.maximumReconnectAttempts}` : null,
-      p.authenticationMethod ? `auth ${p.authenticationMethod}` : (p.authentication ? `auth ${p.authentication}` : null),
-    ].filter(Boolean).join(", ");
-    return [mf.name || "\u2014", p.direction || "\u2014", p.ComponentType || p.TransportProtocol || "\u2014", details || "\u2014"];
-  });
-  if (chanRows.length) {
-    children.push(makeTable(["Channel", "Direction", "Adapter", "Key Settings"], chanRows, [16, 20, 18, 46]));
+  const SECRET_KEY_PATTERN = /api[-_]?key|apikey|secret|password|passwd|token|authorization|privatekey|client[-_]?secret/i;
+  const CURATED_KEYS = new Set(["ComponentType", "TransportProtocol", "MessageProtocol", "direction", "Name"]);
+  if (parsed.messageFlows.length) {
+    parsed.messageFlows.forEach((mf) => {
+      const p = mf.props;
+      children.push(h3(`${mf.name || "Channel"} (${p.ComponentType || p.TransportProtocol || "Adapter"} \u2014 ${p.direction || "\u2014"})`));
+      const curatedRows = [
+        ["Adapter / Component Type", p.ComponentType || "\u2014"],
+        ["Transport Protocol", p.TransportProtocol || "\u2014"],
+        ["Message Protocol", p.MessageProtocol || "\u2014"],
+        ["Address / Endpoint URL", humanEndpoint(p)],
+        ["Direction", p.direction || "\u2014"],
+      ];
+      const rawRows = Object.entries(p)
+        .filter(([k]) => !CURATED_KEYS.has(k))
+        .map(([k, v]) => [k, SECRET_KEY_PATTERN.test(k) ? "[REDACTED]" : v]);
+      children.push(makeTable(["Property", "Value"], [...curatedRows, ...rawRows], [40, 60]));
+      children.push(spacer());
+    });
   } else {
     children.push(body("No adapter channels detected.", { italics: true }));
   }
-  children.push(spacer(), spacer());
+  children.push(spacer());
 
   children.push(h2("9. Mappings & Transformations"));
   children.push(body(ai.mappingsNote));
